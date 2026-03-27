@@ -1,0 +1,206 @@
+#!/usr/bin/env bash
+
+################################################################################
+set -eu
+set -o pipefail
+
+################################################################################
+option_from="HEAD^"
+option_to="HEAD"
+option_authors_file="AUTHORS"
+
+################################################################################
+function usage() {
+  cat <<EOF
+Usage: $(basename "$0") [options] [from-commit to-commit]
+
+  -f FILE Use FILE as the AUTHORS file
+  -g      Print authors from git then exit
+  -h      This message
+  -p USER Print a pull request comment directed to USER
+  -r      Replace the existing AUTHORS file without checking it
+
+NOTE: Must be exeucted from within a git repository.
+
+EOF
+}
+
+################################################################################
+# Strip whitespace and delete blank lines from STDIN to STDOUT.
+function strip_space() {
+  sed -E \
+    -e 's/^[[:space:]]+//' \
+    -e 's/[[:space:]]+$//' \
+    -e 's/[[:space:]]+/ /' \
+    -e '/^[[:space:]]*$/d'
+}
+
+################################################################################
+# Resolve a `git` commit name given on the command line.
+function resolve_git_commit() {
+  local name=$1
+  local commit
+
+  commit=$(git rev-parse --verify --quiet "$name" || :)
+
+  if [ -z "$commit" ]; then
+    echo >&2 "ERROR: invalid commit: $name"
+    echo >&2 "       maybe provide the remote name like: remotes/origin/$name"
+    exit 1
+  fi
+
+  echo "$commit"
+}
+
+################################################################################
+# Ask `git` for a list of authors.
+function authors_from_git() {
+  git log \
+    --pretty=format:%an \
+    "${option_from}..${option_to}" |
+    strip_space |
+    sort -u
+}
+
+################################################################################
+# Fetch the list of authors from the `AUTHORS` file.
+function authors_from_file() {
+  if [ ! -e "$option_authors_file" ]; then
+    echo >&2 "ERROR: file does not exist: $option_authors_file"
+    exit 1
+  fi
+
+  grep -E '^[[:space:]]*-' "$option_authors_file" |
+    sed -E 's/^[[:space:]]*-//' |
+    strip_space |
+    sort -u
+}
+
+################################################################################
+# List all authors from all sources.
+function authors_from_all() {
+  (
+    authors_from_file
+    authors_from_git
+  ) | sort -u
+}
+
+################################################################################
+# Generate a new `AUTHORS` file.
+function generate_authors_file() {
+  local new_file=$1
+
+  (
+    grep -E -v '^[[:space:]]*-' "$option_authors_file"
+    authors_from_all | sed -E -e 's/^/ - /'
+  ) >"$new_file"
+}
+
+################################################################################
+# Check to see if the authors file and `git` agree.
+function diff_authors_file() {
+  local new_file=$1
+  local out_file=$2
+
+  generate_authors_file "$new_file"
+
+  diff -u \
+    --ignore-case \
+    --ignore-all-space \
+    "$option_authors_file" "$new_file" >"$out_file"
+}
+
+################################################################################
+# Report the results of running a `diff`.
+function diff_report() {
+  local new_file="${option_authors_file}.new"
+  local out_file="${option_authors_file}.diff"
+
+  if ! diff_authors_file "$new_file" "$out_file"; then
+    cat "$out_file"
+    echo >&2 "ERROR: missing authors"
+    exit 1
+  fi
+}
+
+################################################################################
+# Produce a comment for a GitHub pull request.
+function pr_comment() {
+  local username=$1
+  local diff_file="${option_authors_file}.diff"
+
+  if [ ! -e "$diff_file" ]; then
+    diff_authors_file "${option_authors_file}.new" "$diff_file" || :
+  fi
+
+  cat <<EOF
+@${username} Please consider adding the following names to the
+\`AUTHORS\` file:
+
+$(authors_from_git)
+
+Here's a patch that does this:
+
+\`\`\`diff
+$(cat "$diff_file")
+\`\`\`
+EOF
+}
+
+################################################################################
+function main() {
+  if [ ! -d ".git" ]; then
+    echo >&2 "ERROR: must be run from a git repository"
+    exit 1
+  fi
+
+  while getopts "f:ghp:r" o; do
+    case "${o}" in
+    f)
+      option_authors_file=$OPTARG
+      ;;
+
+    g)
+      authors_from_git
+      exit
+      ;;
+
+    h)
+      usage
+      exit
+      ;;
+
+    p)
+      pr_comment "$OPTARG"
+      exit
+      ;;
+
+    r)
+      generate_authors_file "$option_authors_file.new"
+      mv "$option_authors_file.new" "$option_authors_file"
+      exit
+      ;;
+
+    *)
+      exit 1
+      ;;
+    esac
+  done
+
+  shift $((OPTIND - 1))
+
+  if [ $# -gt 0 ]; then
+    if [ $# -eq 2 ]; then
+      option_from=$(resolve_git_commit "$1")
+      option_to=$(resolve_git_commit "$2")
+    else
+      echo >&2 "ERROR: provide exactly two commits"
+      exit 1
+    fi
+  fi
+
+  diff_report
+}
+
+################################################################################
+main "$@"
