@@ -5,6 +5,12 @@ set -eu
 set -o pipefail
 
 ################################################################################
+# Because GitHub runners don't set these:
+export LANG=en_US.UTF-8
+export LC_ALL=$LANG
+export LC_COLLATE=$LANG
+
+################################################################################
 option_from="HEAD^"
 option_to="HEAD"
 option_authors_file="AUTHORS"
@@ -128,28 +134,47 @@ function diff_report() {
 function pr_comment() {
   local username=$1
   local diff_file="${option_authors_file}.diff"
+  local authors=()
 
   if [ ! -e "$diff_file" ]; then
     diff_authors_file "${option_authors_file}.new" "$diff_file" || :
   fi
 
-  cat <<EOF
-@${username} Please consider adding the following names to the
-\`AUTHORS\` file:
+  while read -r name; do
+    authors+=("$name")
+  done < <(authors_from_git)
 
-$(authors_from_git)
+  if [ "${#authors[@]}" -gt 0 ]; then
+    echo "@${username} The following names *might* be missing from the \`AUTHORS\` file:"
+    echo
 
-Here's a patch that does this:
+    for name in "${authors[@]}"; do
+      echo " - ${name}"
+      echo
+    done
 
-\`\`\`diff
-$(cat "$diff_file")
-\`\`\`
-EOF
+    if [ -s "$diff_file" ]; then
+      echo "Please consider applying the following patch:"
+      echo
+      echo '```diff'
+      cat "$diff_file"
+      echo '```'
+    fi
+  elif [ -s "$diff_file" ]; then
+    echo "@${username} The \`AUTHORS\` file isn't sorted correctly."
+    echo
+    echo "Please consider applying the following patch:"
+    echo
+    echo '```diff'
+    cat "$diff_file"
+    echo '```'
+  fi
+
 }
 
 ################################################################################
 function main() {
-  if [ ! -d ".git" ]; then
+  if [ ! -e ".git" ]; then
     echo >&2 "ERROR: must be run from a git repository"
     exit 1
   fi
