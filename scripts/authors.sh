@@ -144,7 +144,7 @@ function pr_comment() {
     authors+=("$name")
   done < <(authors_from_git)
 
-  if [ "${#authors[@]}" -gt 0 ]; then
+  if [ "${#authors[@]}" -gt 0 ] && [ -s "$diff_file" ]; then
     echo "@${username} The following names *might* be missing from the \`AUTHORS\` file:"
     echo
 
@@ -153,13 +153,11 @@ function pr_comment() {
       echo
     done
 
-    if [ -s "$diff_file" ]; then
-      echo "Please consider applying the following patch:"
-      echo
-      echo '```diff'
-      cat "$diff_file"
-      echo '```'
-    fi
+    echo "Please consider applying the following patch:"
+    echo
+    echo '```diff'
+    cat "$diff_file"
+    echo '```'
   elif [ -s "$diff_file" ]; then
     echo "@${username} The \`AUTHORS\` file isn't sorted correctly."
     echo
@@ -169,7 +167,6 @@ function pr_comment() {
     cat "$diff_file"
     echo '```'
   fi
-
 }
 
 ################################################################################
