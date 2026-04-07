@@ -14,6 +14,7 @@ export LC_COLLATE=$LANG
 option_from="HEAD^"
 option_to="HEAD"
 option_authors_file="AUTHORS"
+option_only_git_authors=0
 
 ################################################################################
 function usage() {
@@ -42,30 +43,14 @@ function strip_space() {
 }
 
 ################################################################################
-# Resolve a `git` commit name given on the command line.
-function resolve_git_commit() {
-  local name=$1
-  local commit
-
-  commit=$(git rev-parse --verify --quiet "$name" || :)
-
-  if [ -z "$commit" ]; then
-    echo >&2 "ERROR: invalid commit: $name"
-    echo >&2 "       maybe provide the remote name like: remotes/origin/$name"
-    exit 1
-  fi
-
-  echo "$commit"
-}
-
-################################################################################
 # Ask `git` for a list of authors.
 function authors_from_git() {
   git log \
     --pretty=format:%an \
     "${option_from}..${option_to}" |
     strip_space |
-    sort -u
+    sort -u |
+    grep -E -v 'Copilot|\[bot\]'
 }
 
 ################################################################################
@@ -125,7 +110,7 @@ function diff_report() {
   if ! diff_authors_file "$new_file" "$out_file"; then
     cat "$out_file"
     echo >&2 "ERROR: missing authors"
-    exit 1
+    exit 100
   fi
 }
 
@@ -183,8 +168,7 @@ function main() {
       ;;
 
     g)
-      authors_from_git
-      exit
+      option_only_git_authors=1
       ;;
 
     h)
@@ -213,15 +197,19 @@ function main() {
 
   if [ $# -gt 0 ]; then
     if [ $# -eq 2 ]; then
-      option_from=$(resolve_git_commit "$1")
-      option_to=$(resolve_git_commit "$2")
+      option_from=$1
+      option_to=$2
     else
       echo >&2 "ERROR: provide exactly two commits"
       exit 1
     fi
   fi
 
-  diff_report
+  if [ "$option_only_git_authors" -eq 1 ]; then
+    authors_from_git
+  else
+    diff_report
+  fi
 }
 
 ################################################################################
