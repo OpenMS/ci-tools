@@ -43,6 +43,38 @@ function strip_space() {
 }
 
 ################################################################################
+# Resolve a `git` commit name given on the command line.
+#
+# When a repository is cloned in a GitHub action the main branch isn't
+# available directly, even though `$GITHUB_BASE_REF` references it.
+# So we need to fully qualify any symbolic revision name we are given.
+function resolve_git_commit() {
+  local name=$1
+  local commit
+
+  local possible=(
+    "$name"
+    "origin/$name"
+    "remotes/origin/$name"
+  )
+
+  for rev in "${possible[@]}"; do
+    commit=$(git rev-parse --verify --quiet "$rev" || :)
+
+    if [ -n "$commit" ]; then
+      break
+    fi
+  done
+
+  if [ -z "$commit" ]; then
+    echo >&2 "ERROR: invalid revision: $name"
+    exit 1
+  fi
+
+  echo "$commit"
+}
+
+################################################################################
 # Ask `git` for a list of authors.
 function authors_from_git() {
   git log \
@@ -197,8 +229,8 @@ function main() {
 
   if [ $# -gt 0 ]; then
     if [ $# -eq 2 ]; then
-      option_from=$1
-      option_to=$2
+      option_from=$(resolve_git_commit "$1")
+      option_to=$(resolve_git_commit "$2")
     else
       echo >&2 "ERROR: provide exactly two commits"
       exit 1
