@@ -1,0 +1,12 @@
+name: "Test"
+
+on:
+  pull_request:
+
+jobs:
+  shell-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: luizm/action-sh-checker@883217215b11c1fabbf00eb1a9a041f62d74c744
+        env: { SHFMT_OPTS: -i 2 -d }
