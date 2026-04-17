@@ -5,6 +5,10 @@ set -eu
 set -o pipefail
 
 ################################################################################
+script_dir=$(realpath "$(dirname "$0")")
+source "$script_dir/../lib/ci-tools.sh"
+
+################################################################################
 declare -A topp_exceptions=(
   ["FeatureLinkerBase.cpp"]=1
 )
@@ -60,7 +64,7 @@ function topp_files_in_map() {
 
     if [ "${topp_exceptions[$base]:-0}" -ne 1 ] && ! is_in_tools_map_cpp "$base"; then
       echo >&2 "ERROR: $base is not listed in $option_tool_handler_cpp"
-      exit 1
+      exit 100
     fi
   done < <(find "$option_topp_dir" -type f -name '*.cpp' -print0)
 }
@@ -121,8 +125,8 @@ function main() {
 
   if [ $# -gt 0 ]; then
     if [ $# -eq 2 ]; then
-      option_from=$1
-      option_to=$2
+      option_from=$(resolve_git_commit "$1")
+      option_to=$(resolve_git_commit "$2")
     else
       echo >&2 "ERROR: provide exactly two commits"
       exit 1
