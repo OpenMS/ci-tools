@@ -1,0 +1,14 @@
+name: "Cache via rsync"
+description: "Cache a directory to a private server using rsync"
+inputs:
+  path:
+    description: "A path to a directory that should be cached"
+    required: true
+  key:
+    description: "A cache key, which is essentially a directory name on the remote server"
+    required: true
+runs:
+  using: 'node24'
+  main: dist/pull.js
+  post: dist/push.js
+  post-if: "success()"
