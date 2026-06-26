@@ -4,14 +4,17 @@ import { nodeResolve } from "@rollup/plugin-node-resolve";
 
 
 export default defineConfig([
-  {
-    input: "actions/rsync-cache/src/restore.js",
+  "actions/rsync-cache/src/restore.js",
+  "actions/rsync-cache/src/commit.js",
+].map(path => {
+  return {
+    input: path,
     output: {
       esModule: true,
-      file: "actions/rsync-cache/dist/restore.js",
+      file: path.replace("/src/", "/dist/"),
       format: "es",
       sourcemap: true,
     },
     plugins: [commonjs(), nodeResolve({ preferBuiltins: true })],
   }
-]);
+}));
