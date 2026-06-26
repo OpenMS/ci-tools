@@ -1,14 +1,29 @@
 name: "Cache via rsync"
 description: "Cache a directory to a private server using rsync"
 inputs:
+  name:
+    description: "A name to use for the sub-directory on the remote server"
+    required: true
   path:
-    description: "A path to a directory that should be cached"
+    description: "An absolute path to a directory that should be cached"
     required: true
   key:
-    description: "A cache key, which is essentially a directory name on the remote server"
+    description: "A cache key, which is essentially a sub-directory name on the remote server"
+    required: true
+  ssh_key:
+    description: "The contents of an SSH private key"
+    required: true
+  ssh_host:
+    description: "The host name of the remote server"
+    required: true
+  ssh_port:
+    description: "The port to use for SSH"
+    required: false
+  ssh_user:
+    description: "The remote SSH user"
     required: true
 runs:
   using: 'node24'
-  main: dist/pull.js
-  post: dist/push.js
+  main: dist/restore.js
+  post: dist/commit.js
   post-if: "success()"
