@@ -1,7 +1,8 @@
 {
   "type": "module",
   "scripts": {
-    "build": "rollup -c"
+    "build": "rollup -c",
+    "test": "node --test"
   },
   "dependencies": {
     "@actions/core": "^3.0.1",

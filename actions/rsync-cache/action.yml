@@ -12,7 +12,7 @@ inputs:
     required: true
   ssh_key:
     description: "The contents of an SSH private key"
-    required: true
+    required: false
   ssh_host:
     description: "The host name of the remote server"
     required: true
