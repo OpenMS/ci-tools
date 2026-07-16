@@ -19,6 +19,7 @@
           devShells.default = pkgs.mkShell {
             nativeBuildInputs = with pkgs; [
               nodejs_24
+              prettier
               shellcheck
               shfmt
             ];

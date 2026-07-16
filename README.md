@@ -28,3 +28,6 @@ To use, put something like this in your workflow YAML:
     ssh_port: ${{ secrets.ARCHIVE_RRSYNC_PORT }}
     ssh_user: ${{ secrets.ARCHIVE_RRSYNC_USER }}
 ```
+
+NOTE: If the `ssh_key` is not available the action will automatically
+disable itself and print a notice to the workflow output.
