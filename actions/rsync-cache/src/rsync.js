@@ -140,10 +140,11 @@ export default class Rsync {
       "rclone",
       [
         "copy",
+        "-v",
         "--http-url",
         `https://archive.openms.de/openms/${this.name}/${this.key}`,
         ":http:",
-        path.dirname(this.path),
+        path.basename(this.path),
       ],
       { ignoreReturnCode: true, cwd: path.dirname(this.path) },
     );
@@ -162,7 +163,7 @@ export default class Rsync {
 
     if (this.disabled || exit_code != 0) {
       // Fallback to rclone:
-      exit_code = this.fetch_only();
+      exit_code = await this.fetch_only();
     }
 
     if (exit_code != 0) {
