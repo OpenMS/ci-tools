@@ -30778,7 +30778,7 @@ class Rsync {
 
     // SSH settings:
     this.ssh_key_dir = os$1.homedir() + "/.ssh";
-    this.ssh_key_file = this.ssh_key_dir + "/." + crypto$1.randomUUID();
+    this.ssh_key_file = this.ssh_key_dir + "/" + crypto$1.randomUUID();
     this.ssh_key = this.core.getInput("ssh_key", { required: false });
 
     if (
@@ -30813,6 +30813,11 @@ class Rsync {
 
     if (!path$1.isAbsolute(this.path)) {
       throw new Error(`path to cache must be absolute: ${this.path}`);
+    }
+
+    // SSH will reject the key if it doesn't end with a newline.
+    if (this.ssh_key && !this.ssh_key.endsWith("\n")) {
+      this.ssh_key += "\n";
     }
   }
 

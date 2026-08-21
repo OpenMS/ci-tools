@@ -141,7 +141,7 @@ test("creates and removes SSH key", async () => {
   assert(file_name);
   assert.equal(deps.fs.files.size, 1);
   assert(deps.fs.files.has(file_name));
-  assert.equal(deps.fs.files.get(file_name), key_text);
+  assert.equal(deps.fs.files.get(file_name), key_text + "\n");
   assert.equal(deps.fs.modes.get(file_name), 0o600);
 
   // File was also deleted.
