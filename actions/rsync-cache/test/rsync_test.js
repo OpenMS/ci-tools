@@ -161,11 +161,11 @@ test("failure triggers a notice", async () => {
   let rsync = deps.rsync();
 
   deps.exec.exit_code = 1;
-  await rsync.pull();
+  await rsync.pull(); // Also calls `fetch_only`.
   await rsync.push();
 
-  assert.equal(deps.exec.commands.length, 2);
-  assert.equal(deps.core.notices.length, 2);
+  assert.equal(deps.exec.commands.length, 3);
+  assert.equal(deps.core.notices.length, 3);
 });
 
 test("can pull the cache", async () => {
