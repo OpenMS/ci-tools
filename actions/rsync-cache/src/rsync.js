@@ -127,14 +127,40 @@ export default class Rsync {
     return exit_code;
   }
 
+  // Fall back to rclone if the SSH key is missing.  We can at least
+  // fetch the cache from the public HTTP view.
+  async fetch_only() {
+    this.core.notice(`Falling back to HTTP fetch...`);
+
+    const exit_code = await this.exec.exec(
+      "rclone",
+      [
+        "copy",
+        "--http-url",
+        `https://archive.openms.de/openms/${this.name}/${this.key}`,
+        ":http:",
+        this.path,
+      ],
+      { ignoreReturnCode: true },
+    );
+
+    return exit_code;
+  }
+
   // Pull the cache from the remote server.
   async pull() {
-    const rsync_args = [
-      this.ssh_dir, // FROM
-      this.path, // TO
-    ];
+    let exit_code = -1;
 
-    const exit_code = await this.run(rsync_args);
+    if (this.disabled) {
+      exit_code = this.fetch_only();
+    } else {
+      const rsync_args = [
+        this.ssh_dir, // FROM
+        this.path, // TO
+      ];
+
+      exit_code = await this.run(rsync_args);
+    }
 
     if (exit_code != 0) {
       this.core.notice(`Cache ${this.name}: error fetching remote cache`);

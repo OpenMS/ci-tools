@@ -201,5 +201,9 @@ test("disabled on missing ssh key", async () => {
     assert.equal(exit_code, 0);
     assert.equal(deps.exec.commands.length, 0);
     assert.equal(deps.core.notices.length, 1);
+
+    // But fetching should try to run rclone:
+    await rsync.pull();
+    deps.exec.assert_last_command("rclone");
   }
 });
