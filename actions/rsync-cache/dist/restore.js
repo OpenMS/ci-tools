@@ -30796,11 +30796,6 @@ class Rsync {
     this.ssh_user = this.core.getInput("ssh_user", { required: true });
     this.ssh_dir = `${this.ssh_user}@${this.ssh_host}:${this.name}/${this.key}/`;
 
-    // Add a trailing slash to the path if necessary.
-    if (!this.path.match(/\/$/)) {
-      this.path += "/";
-    }
-
     this._validate();
     this._set_vars();
   }
@@ -30811,6 +30806,9 @@ class Rsync {
       this.ssh_port = "22";
     }
 
+    // NOTE: We require absolute paths for security, but due to
+    // Windows paths having a colon we need to use relative paths in
+    // the command we run.
     if (!path$1.isAbsolute(this.path)) {
       throw new Error(`path to cache must be absolute: ${this.path}`);
     }
@@ -30866,7 +30864,11 @@ class Rsync {
       await this.fs.chmod(this.ssh_key_file, 0o600);
 
       // Run rsync.
-      const options = { ignoreReturnCode: true };
+      const options = {
+        ignoreReturnCode: true,
+        cwd: path$1.dirname(this.path),
+      };
+
       exit_code = await this.exec.exec(
         this.command,
         [...this.args, ...additional_arguments],
@@ -30886,6 +30888,8 @@ class Rsync {
   async fetch_only() {
     this.core.notice(`Falling back to HTTP fetch...`);
 
+    await this.io.mkdirP(this.path);
+
     const exit_code = await this.exec.exec(
       "rclone",
       [
@@ -30893,9 +30897,9 @@ class Rsync {
         "--http-url",
         `https://archive.openms.de/openms/${this.name}/${this.key}`,
         ":http:",
-        this.path,
+        path$1.dirname(this.path),
       ],
-      { ignoreReturnCode: true },
+      { ignoreReturnCode: true, cwd: path$1.dirname(this.path) },
     );
 
     return exit_code;
@@ -30910,7 +30914,7 @@ class Rsync {
     } else {
       const rsync_args = [
         this.ssh_dir, // FROM
-        this.path, // TO
+        path$1.basename(this.path) + "/", // TO
       ];
 
       exit_code = await this.run(rsync_args);
@@ -30925,7 +30929,7 @@ class Rsync {
   async push() {
     const rsync_args = [
       "--delete-before",
-      this.path, // FROM
+      path$1.basename(this.path) + "/", // FROM
       this.ssh_dir, // TO
     ];
 

@@ -38,6 +38,13 @@ class Deps {
         assert.equal(name, this.commands.at(-1).at(0));
       }
 
+      // Assert that the last command ran in `dir`.
+      assert_last_cwd(dir) {
+        assert(this.commands.length > 0);
+        const options = this.commands.at(-1).at(2);
+        assert.equal(dir, options["cwd"]);
+      }
+
       // Return the last two command line arguments for the last
       // command that was executed.
       get_final_args() {
@@ -108,7 +115,7 @@ class Deps {
 function validate_rsync_paths(rsync, server, directory) {
   assert(server && directory);
   assert.equal(rsync.ssh_dir, server);
-  assert.equal(rsync.path, directory);
+  assert.equal(path.basename(rsync.path) + "/", directory);
 
   // The server should start with a username and contain a colon.
   assert.match(server, /^[\w]+@/);
@@ -169,6 +176,7 @@ test("can pull the cache", async () => {
   // local directory.
   await rsync.pull();
   deps.exec.assert_last_command("rsync");
+  deps.exec.assert_last_cwd(path.dirname(rsync.path));
 
   const [server, directory] = deps.exec.get_final_args();
   validate_rsync_paths(rsync, server, directory);
@@ -183,6 +191,7 @@ test("can push the cache", async () => {
   // first, then the ssh server.
   await rsync.push();
   deps.exec.assert_last_command("rsync");
+  deps.exec.assert_last_cwd(path.dirname(rsync.path));
 
   const [directory, server] = deps.exec.get_final_args();
   validate_rsync_paths(rsync, server, directory);
@@ -205,5 +214,6 @@ test("disabled on missing ssh key", async () => {
     // But fetching should try to run rclone:
     await rsync.pull();
     deps.exec.assert_last_command("rclone");
+    deps.exec.assert_last_cwd(path.dirname(rsync.path));
   }
 });
