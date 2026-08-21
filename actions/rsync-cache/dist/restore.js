@@ -30894,10 +30894,11 @@ class Rsync {
       "rclone",
       [
         "copy",
+        "-v",
         "--http-url",
         `https://archive.openms.de/openms/${this.name}/${this.key}`,
         ":http:",
-        path$1.dirname(this.path),
+        path$1.basename(this.path),
       ],
       { ignoreReturnCode: true, cwd: path$1.dirname(this.path) },
     );
@@ -30916,7 +30917,7 @@ class Rsync {
 
     if (this.disabled || exit_code != 0) {
       // Fallback to rclone:
-      exit_code = this.fetch_only();
+      exit_code = await this.fetch_only();
     }
 
     if (exit_code != 0) {
