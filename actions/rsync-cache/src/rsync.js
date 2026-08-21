@@ -153,17 +153,16 @@ export default class Rsync {
 
   // Pull the cache from the remote server.
   async pull() {
-    let exit_code = -1;
+    const rsync_args = [
+      this.ssh_dir, // FROM
+      path.basename(this.path) + "/", // TO
+    ];
 
-    if (this.disabled) {
+    let exit_code = await this.run(rsync_args);
+
+    if (this.disabled || exit_code != 0) {
+      // Fallback to rclone:
       exit_code = this.fetch_only();
-    } else {
-      const rsync_args = [
-        this.ssh_dir, // FROM
-        path.basename(this.path) + "/", // TO
-      ];
-
-      exit_code = await this.run(rsync_args);
     }
 
     if (exit_code != 0) {
