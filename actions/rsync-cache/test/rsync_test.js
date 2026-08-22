@@ -56,6 +56,7 @@ class Deps {
       constructor(inputs) {
         this.inputs = inputs;
         this.notices = [];
+        this.platform = { isWindows: false };
       }
 
       getInput(key, options = {}) {
@@ -88,6 +89,7 @@ class Deps {
         this.files = new Map();
         this.modes = new Map();
         this.unlinked = [];
+        this.readdir_files = [];
       }
 
       async writeFile(name, content, encoding) {
@@ -100,6 +102,10 @@ class Deps {
 
       async unlink(file) {
         this.unlinked.push(file);
+      }
+
+      async readdir() {
+        return this.readdir_files;
       }
     })();
 
@@ -196,6 +202,22 @@ test("can push the cache", async () => {
   const [directory, server] = deps.exec.get_final_args();
   validate_rsync_paths(rsync, server, directory);
   assert(deps.core.notices.length == 0);
+});
+
+test("windows can find ssh.exe", async () => {
+  let deps = new Deps();
+  let rsync = deps.rsync();
+
+  deps.core.platform.isWindows = true;
+  deps.fs.readdir_files = ["fake\\foo", "bin\\ssh.exe"];
+
+  await rsync.push();
+
+  const args = deps.exec.commands.at(-1).at(1);
+  assert.equal("-e", args.at(0));
+
+  const ssh_command = args.at(1).split(" ").at(0);
+  assert(ssh_command.endsWith("bin\\ssh.exe"));
 });
 
 test("disabled on missing ssh key", async () => {

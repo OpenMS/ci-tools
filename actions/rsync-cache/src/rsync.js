@@ -43,7 +43,6 @@ export default class Rsync {
     this.ssh_dir = `${this.ssh_user}@${this.ssh_host}:${this.name}/${this.key}/`;
 
     this._validate();
-    this._set_vars();
   }
 
   // Ensure all our settings look good.
@@ -66,10 +65,12 @@ export default class Rsync {
   }
 
   // Prepare some variables.
-  _set_vars() {
+  async _set_vars() {
+    const ssh_exe = await this._find_ssh();
+
     // The SSH command line.
     const ssh_command = [
-      "ssh",
+      ssh_exe,
       "-i",
       this.ssh_key_file,
       "-p",
@@ -95,12 +96,31 @@ export default class Rsync {
     ];
   }
 
+  // Try to find the path to SSH.
+  async _find_ssh() {
+    if (this.core.platform.isWindows) {
+      const base = "C:\\ProgramData\\chocolatey\\lib\\rsync\\tools";
+      const files = await this.fs.readdir(base, { recursive: true });
+
+      for (const file of files) {
+        if (file.endsWith("\\ssh.exe") || file.endsWith("/ssh.exe")) {
+          return `${base}\\${file}`;
+        }
+      }
+
+      throw new Error(`unable to find ssh.exe on Windows`);
+    } else {
+      return "ssh";
+    }
+  }
+
   // Run rsync with extra arguments and return its exit code.
   async run(additional_arguments = []) {
     if (this.disabled) {
       return 0;
     }
 
+    await this._set_vars();
     let exit_code = -1;
 
     try {
