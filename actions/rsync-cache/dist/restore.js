@@ -30840,9 +30840,16 @@ class Rsync {
       ssh_command,
       "--progress",
       "--human-readable",
-      "--archive",
+      "--recursive",
+      "--links",
+      "--times",
       "--verbose",
       "--compress",
+
+      // Force permissions so we can read the files back.  Without
+      // these transfers from Windows will leave the cache unreadable.
+      "--no-perms",
+      "--chmod=u=rwX,go=rX",
 
       // We need this so we can create sub-directories, one for each
       // cache key (OS, architecture, compiler, etc.)
